@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mortal Sword Battle</title>
+  <style>
+    canvas {
+      border: 1px solid #000;
+      display: block;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="400" height="300"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Character list
+    const characters = [
+      { name: 'Sub-Zero', color: '#3498db', speed: 5, health: 100 },
+      { name: 'Scorpion', color: '#e74c3c', speed: 6, health: 90 }
+    ];
+
+    let selectedCharacterIndex = 0;
+    let player = Object.assign({}, characters[selectedCharacterIndex]); // Copy selected character properties
+    let enemy = {
+      x: canvas.width - 80,
+      y: canvas.height / 2,
+      width: 30,
+      height: 60,
+      color: '#ff4500', // Dragon Ball Z orange-red
+      speed: 3,
+      isAttacking: false,
+      health: 100
+    };
+
+    let gameStarted = false;
+
+    function drawCharacter(character) {
+      ctx.fillStyle = character.color;
+      ctx.fillRect(character.x, character.y, character.width, character.height);
+
+      // Draw health bar
+      ctx.fillStyle = 'green';
+      ctx.fillRect(character.x, character.y - 10, (character.health / 100) * character.width, 5);
+    }
+
+    function drawAttackAnimation(character) {
+      ctx.fillStyle = 'yellow';
+      ctx.fillRect(character.x + character.width, character.y, 10, character.height);
+    }
+
+    function drawCharacterSelection() {
+      ctx.font = '20px Arial';
+      ctx.fillStyle = '#ff4500'; // Dragon Ball Z orange-red
+      ctx.fillText('Choose Your Fighter', canvas.width / 2 - 100, canvas.height / 2 - 40);
+
+      characters.forEach((character, index) => {
+        ctx.fillStyle = character.color;
+        ctx.fillRect(canvas.width / 2 - 50 + index * 80, canvas.height / 2, 40, 60);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(character.name, canvas.width / 2 - 35 + index * 80, canvas.height / 2 + 80);
+      });
+    }
+
+    function drawOpeningAnimation() {
+      ctx.font = '30px Arial';
+      ctx.fillStyle = '#ff4500'; // Dragon Ball Z orange-red
+      ctx.fillText('Mortal Sword Battle', canvas.width / 2 - 120, canvas.height / 2 - 30);
+      ctx.font = '15px Arial';
+      ctx.fillStyle = '#ffdb58'; // Yu-Gi-Oh! yellow
+      ctx.fillText('Press Enter to start', canvas.width / 2 - 70, canvas.height / 2 + 10);
+    }
+
+    function update() {
+      if (!gameStarted) {
+        return;
+      }
+
+      // Game logic...
+
+      // Move player
+      if (keyState['ArrowRight'] && player.x < canvas.width - player.width) {
+        player.x += player.speed;
+      }
+      if (keyState['ArrowLeft'] && player.x > 0) {
+        player.x -= player.speed;
+      }
+
+      // Attack handling
+      if (keyState['Space'] && !player.isAttacking) {
+        player.isAttacking = true;
+        setTimeout(() => player.isAttacking = false, 500); // Reset after 500ms
+
+        // Check if enemy is hit during the attack
+        if (player.x + player.width > enemy.x && player.x < enemy.x + enemy.width &&
+            player.y < enemy.y + enemy.height && player.y + player.height > enemy.y) {
+          enemy.health -= 10; // Decrease enemy health
+        }
+      }
+
+      // Move enemy
+      if (enemy.x > player.x) {
+        enemy.x -= enemy.speed;
+      } else {
+        enemy.x += enemy.speed;
+      }
+
+      // Enemy attack handling
+      if (!enemy.isAttacking) {
+        enemy.isAttacking = true;
+        setTimeout(() => {
+          enemy.isAttacking = false;
+
+          // Check if player is hit during the enemy attack
+          if (enemy.x + enemy.width > player.x && enemy.x < player.x + player.width &&
+              enemy.y < player.y + player.height && enemy.y + enemy.height > player.y) {
+            player.health -= 10; // Decrease player health
+          }
+        }, 800); // Reset after 800ms
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!gameStarted) {
+        drawOpeningAnimation();
+        drawCharacterSelection();
+        return;
+      }
+
+      drawCharacter(player);
+
+      if (player.isAttacking) {
+        drawAttackAnimation(player);
+      }
+
+      drawCharacter(enemy);
+
+      if (enemy.isAttacking) {
+        drawAttackAnimation(enemy);
+      }
+
+      // Check for game over
+      if (player.health <= 0) {
+        alert("Game Over! You lost.");
+        resetGame();
+      } else if (enemy.health <= 0) {
+        alert("Congratulations! You won!");
+        resetGame();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resetGame() {
+      player = Object.assign({}, characters[selectedCharacterIndex]); // Reset player to selected character
+      enemy.health = 100;
+      player.x = 50;
+      enemy.x = canvas.width - 80;
+      gameStarted = false;
+    }
+
+    // Keyboard input handling
+    const keyState = {};
+    window.addEventListener('keydown', (e) => {
+      keyState[e.key] = true;
+
+      if (!gameStarted && e.key === 'Enter') {
+        gameStarted = true;
+      } else if (!gameStarted && e.key === 'ArrowRight') {
+        // Cycle through character selection to the right
+        selectedCharacterIndex = (selectedCharacterIndex + 1) % characters.length;
+        player = Object.assign({}, characters[selectedCharacterIndex]); // Update player to selected character
+      } else if (!gameStarted && e.key === 'ArrowLeft') {
+        // Cycle through character selection to the left
+        selectedCharacterIndex = (selectedCharacterIndex - 1 + characters.length) % characters.length;
+        player = Object.assign({}, characters[selectedCharacterIndex]); // Update player to selected character
+      }
+    });
+    window.addEventListener('keyup', (e) => keyState[e.key] = false);
+
+    gameLoop();
+  </script>
+
+</body>
+</html>
